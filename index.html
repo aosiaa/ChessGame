@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>垓下之战</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1>垓下之战</h1>
+    
+    <details class="collapsible-section">
+        <summary>🎯 游戏规则</summary>
+        <div class="game-rules">
+            <div class="rule-section">
+                <p><strong>基本目标：</strong>您操控一个车(红色)，需要在棋盘上与敌方棋子战斗。车可以横竖直线移动，需要避开对方棋子的攻击范围。</p>
+                
+                <p><strong>移动规则：</strong></p>
+                <p>• 车可以在水平或垂直方向直线移动任意距离</p>
+                <p>• 车不能跨越其他棋子移动（路径必须畅通）</p>
+                <p>• 车可以吃掉移动路径终点的敌方棋子</p>
+                
+                <p><strong>危险区域：</strong>棋盘上标记有❌的位置是危险区域，车移动到这些位置会被敌方棋子吃掉，导致游戏结束。</p>
+                
+                <p><strong>特殊规则：</strong>车吃掉"将"后，下一步移动时会消除车所在位置的整行和整列上的所有棋子，这是一个强大的清场能力。</p>
+                
+                <p><strong>敌方棋子特点：</strong></p>
+                <p>• <strong>卒：</strong>可以向前、后、左、右移动一格</p>
+                <p>• <strong>车：</strong>横竖直线移动，不能越子</p>
+                <p>• <strong>马：</strong>走"日"字形，但可能被"蹩马腿"</p>
+                <p>• <strong>炮：</strong>需要隔一个棋子才能攻击</p>
+                <p>• <strong>象：</strong>走"田"字形，不能被"塞象眼"</p>
+                <p>• <strong>士：</strong>斜向移动一格</p>
+                <p>• <strong>将：</strong>上下左右移动一格，是最有价值的目标</p>
+            </div>
+        </div>
+    </details>
+
+    <div class="game-status" id="gameStatus">点击移动模式已开启：点击选中棋子，再点击目标位置移动。也可以拖拽棋子移动。</div>
+
+    <!-- 主要游戏区域 -->
+    <div class="game-layout">
+        <!-- 棋子选择面板 -->
+        <div class="piece-selector-sidebar">
+            <!-- <h4>棋子选择</h4> -->
+            <div class="piece-palette-vertical">
+                <div class="palette-piece" data-type="pawn" title="卒" draggable="true">卒</div>
+                <div class="palette-piece" data-type="rook" title="车" draggable="true">车</div>
+                <div class="palette-piece" data-type="knight" title="马" draggable="true">马</div>
+                <div class="palette-piece" data-type="cannon" title="炮" draggable="true">炮</div>
+                <div class="palette-piece" data-type="bishop" title="象" draggable="true">象</div>
+                <div class="palette-piece" data-type="advisor" title="士" draggable="true">士</div>
+                <div class="palette-piece" data-type="king" title="将" draggable="true">将</div>
+            </div>
+            <p class="piece-instruction">点击或拖拽棋子到棋盘添加。双击棋盘上的棋子可删除。</p>
+            <button class="btn btn-secondary btn-sm" id="cancelAddPiece" style="display: none;">取消添加</button>
+        </div>
+
+        <!-- 棋盘区域 -->
+        <div class="board-container">
+            <div class="board" id="board"></div>
+        </div>
+    </div>
+
+    <div class="mobile-controls" id="mobileControls">
+        <p class="mobile-info">提示：在移动设备上，先点击棋子选中，再点击目标位置移动</p>
+    </div>
+
+    <div class="result-area" id="resultArea">
+        <div class="move-analysis-header">
+            <h3 class="analysis-title">🚗 车的移动</h3>
+            <div class="analysis-status" id="analysisStatus">
+                <span class="status-dot"></span>
+                <span class="status-label">等待分析</span>
+            </div>
+        </div>
+        <div class="move-analysis-content">
+            <div class="analysis-placeholder" id="analysisPlaceholder">
+                <div class="placeholder-icon">🧠</div>
+                <p>请添加棋子后开始分析</p>
+            </div>
+            <div class="analysis-result" id="analysisResult" style="display: none;">
+                <div class="analysis-stats-grid">
+                    <div class="stat-card best-move-card-compact">
+                        <span class="stat-icon">🎯</span>
+                        <div class="stat-content">
+                            <span class="stat-label">最佳移动</span>
+                            <span class="stat-value" id="moveInfo"></span>
+                            <span class="stat-score" id="moveScore"></span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon">🛡️</span>
+                        <div class="stat-content">
+                            <span class="stat-label">安全移动</span>
+                            <span class="stat-value" id="safeMoveCount"></span>
+                        </div>
+                    </div>
+                    <div class="stat-card" id="threatsCard" style="display: none;">
+                        <span class="stat-icon">⚔️</span>
+                        <div class="stat-content">
+                            <span class="stat-label">威胁分布</span>
+                            <span class="stat-value" id="threatsValue"></span>
+                        </div>
+                    </div>
+                    <div class="stat-card" id="captureCard" style="display: none;">
+                        <span class="stat-icon">🎯</span>
+                        <div class="stat-content">
+                            <span class="stat-label">直接吃子</span>
+                            <span class="stat-value" id="captureValue"></span>
+                        </div>
+                    </div>
+                    <div class="stat-card" id="maxThreatCard" style="display: none;">
+                        <span class="stat-icon">⚡</span>
+                        <div class="stat-content">
+                            <span class="stat-label">最大威胁</span>
+                            <span class="stat-value" id="maxThreatValue"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主要功能按钮 -->
+    <div class="main-controls">
+        <div class="button-group-inline">
+            <button class="btn btn-primary" id="calculateMove">计算最佳移动</button>
+            <button class="btn btn-secondary" id="toggleClickMove">关闭点击移动</button>
+            <button class="btn btn-warning" id="resetBoard">重置棋盘</button>
+        </div>
+    </div>
+
+   
+
+    <details class="collapsible-section">
+        <summary>高级功能</summary>
+        <div class="advanced-controls">
+            <!-- 手动输入坐标添加 -->
+            <details class="old-input-method">
+                <summary>手动输入坐标添加</summary>
+                <div class="input-grid">
+                    <div>
+                        <label for="pieceType">棋子类型:</label>
+                        <select id="pieceType">
+                            <option value="pawn">卒</option>
+                            <option value="rook">车</option>
+                            <option value="knight">马</option>
+                            <option value="cannon">炮</option>
+                            <option value="bishop">象</option>
+                            <option value="advisor">士</option>
+                            <option value="king">将</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="xCoord">X坐标 (1-8):</label>
+                        <input type="number" id="xCoord" min="1" max="8" value="1">
+                    </div>
+                    <div>
+                        <label for="yCoord">Y坐标 (1-9):</label>
+                        <input type="number" id="yCoord" min="1" max="9" value="1">
+                    </div>
+                    <div class="button-group-inline">
+                        <button class="btn btn-success btn-sm" id="addPiece">添加棋子</button>
+                        <button class="btn btn-danger btn-sm" id="toggleDeleteMode">删除模式</button>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </details>
+
+    <details class="collapsible-section" open>
+        <summary>棋局存档</summary>
+        <div class="archive-area">
+            <div class="input-grid">
+                <div>
+                    <label for="archiveName">存档名称:</label>
+                    <input type="text" id="archiveName" placeholder="输入存档名称">
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-action" id="saveGame">保存当前棋局</button>
+                    <button class="btn btn-action" id="loadGameList">查看存档列表</button>
+                </div>
+            </div>
+            <div class="archive-list" id="archiveList" style="display: none;">
+                <p>加载中...</p>
+            </div>
+        </div>
+    </details>
+    
+    <div>
+        
+        <div class="pay-img">
+            <img src="./wechat.jpg" />
+            <img src="./alipay.jpg" />
+        </div>
+    </div>
+<h3>理解万岁</h3>
+<p>如果这份内容对您有帮助，欢迎请我喝杯咖啡！您的每一份支持都是我持续创作的动力。感谢！</p>
+        <p>If you found this helpful, I'd appreciate you buying me a coffee. Your support is what fuels my continued creation. Thank you!</p>
+    <script src="index.js"></script>
+    <script>
+        // 添加禁用F12和右键菜单的代码
+        document.addEventListener('keydown', function (e) {
+            // 禁用 F12
+            if (e.key === 'F12' || e.keyCode === 123) {
+                e.preventDefault();
+                return false;
+            }
+
+            // 禁用 Ctrl+Shift+I (Chrome开发者工具快捷键)
+            if ((e.ctrlKey && e.shiftKey && e.keyCode === 73) ||
+                // 禁用 Ctrl+Shift+J (Chrome控制台)
+                (e.ctrlKey && e.shiftKey && e.keyCode === 74) ||
+                // 禁用 Ctrl+U (查看源代码)
+                (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // 禁用右键菜单
+        document.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            return false;
+        });
+    </script>
+</body>
+
+</html>
